@@ -1,0 +1,4 @@
+# Huffman.py uses only the Python standard library.
+# The steganography scripts need these two packages.
+numpy==2.0.2
+Pillow==10.4.0
