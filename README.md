@@ -16,13 +16,13 @@ Raw images take a lot of space, and sometimes an image also has to carry a messa
 - Huffman code table saved to a text file, one `byte -> code` line per symbol.
 - Compression ratio (CR) printed after every run.
 - LSB steganography keyed by a seed: pixel positions come from a seeded random permutation, so the message cannot be located without the seed.
-- Separate decoder script for the receiver, who only needs the image, the seed, and the message length.
+- A reveal mode for the receiver, who needs only the image and the seed. A wrong seed reports "no message found" instead of garbage.
 
 ## How it works
 
 **Compression (`src/Huffman.py`).** The image file is read as bytes and the frequency of each byte value is counted. A min-heap repeatedly merges the two least frequent nodes until one tree remains; walking the tree assigns shorter codes to more frequent bytes. The file is rewritten as a stream of these codes, padded to a whole number of bytes. The first byte of the compressed file records how many padding bits were added. Decompression reads that header, strips the padding, and matches prefix codes bit by bit to rebuild the original bytes.
 
-**Steganography (`src/steganography.py`, `src/steganographyDecode.py`).** The message is converted to bits. The seed initialises Python's random generator, which shuffles the list of all pixel indices. Each message bit replaces the least significant bit of the red channel of the next pixel in that order. The result is saved as PNG so the bits survive. The receiver repeats the shuffle with the same seed and reads the bits back.
+**Steganography (`src/steganography.py`).** The message is converted to bits, preceded by a 32-bit header holding its length. The seed initialises Python's random generator, which shuffles the list of all pixel indices. Each bit replaces the least significant bit of the red channel of the next pixel in that order. The result is saved as PNG so the bits survive. The receiver repeats the shuffle with the same seed, reads the header, then reads exactly that many bits back. With a different seed the pixel order is different, so the header is nonsense and the script reports that no message was found.
 
 ## Results
 
@@ -42,8 +42,8 @@ Hiding the 24-character message `Hello Shiraz University!` with seed `12345`:
 
 | Item | Value |
 |---|---|
-| Message length | 192 bits |
-| Pixels changed | 93 out of 360,000 |
+| Hidden bits | 224 (32-bit length header + 192 message bits) |
+| Pixels changed | 99 out of 360,000 |
 | Largest change per channel | 1 |
 | Output | `examples/jellyfish_stego.png`, decodes back to the exact message |
 
@@ -67,16 +67,10 @@ python src/Huffman.py
 
 This writes `jellyfish_compressed.bin`, `jellyfish_decompressed.bmp`, and `huffman_codes.txt` into `examples/` and prints the CR. To try another image, save it as BMP in `examples/` and change `INPUT_IMAGE` at the top of the script.
 
-Hide a message. The script asks for the input image, output image, message, and seed, then prints the message length in bits, which the receiver needs:
+Hide or reveal a message. The script first asks for the mode. In `hide` mode it asks for the input image (use the decompressed image from the previous step), the output PNG, the message, and the seed. In `reveal` mode it asks only for the image and the seed:
 
 ```bash
 python src/steganography.py
-```
-
-Recover the message with the image, the length, and the seed:
-
-```bash
-python src/steganographyDecode.py
 ```
 
 ## Project structure
@@ -85,8 +79,7 @@ python src/steganographyDecode.py
 .
 ├── src/
 │   ├── Huffman.py               # compress, save code table, decompress, print CR
-│   ├── steganography.py         # hide a message (LSB, seeded)
-│   └── steganographyDecode.py   # receiver side
+│   └── steganography.py         # hide or reveal a message (LSB, seeded)
 ├── examples/
 │   ├── jellyfish.bmp            # sample input (uncompressed)
 │   ├── jellyfish_compressed.bin # sample compressed output
@@ -100,7 +93,7 @@ python src/steganographyDecode.py
 ## Limitations and future work
 
 - Huffman works on raw file bytes, so it only pays off for uncompressed formats such as BMP. On JPEG or PNG input the ratio is about 1.0. Decoding the pixels first would make it format independent.
-- The compression script has a fixed input path, and the steganography scripts accept only RGB images, a message no longer than the pixel count, and crash instead of reporting a wrong seed or length.
+- The compression script has a fixed input path, and the message must fit in one bit per pixel. Only the red channel is used, so capacity is a third of what LSB could offer.
 - The code table is not stored inside the compressed file, so decompression only works in the same run that built the tree. A standalone decompressor would need the table written as a header.
 
 ## License
