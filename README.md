@@ -52,8 +52,8 @@ Hiding the 24-character message `Hello Shiraz University!` with seed `12345`:
 Prerequisites: Python 3.9 or newer and git.
 
 ```bash
-git clone https://github.com/matinmonshizadeh/Image-Compression-Huffman-coding-technique.git
-cd Image-Compression-Huffman-coding-technique
+git clone https://github.com/matinmonshizadeh/huffman-compression-lsb-steganography.git
+cd huffman-compression-lsb-steganography
 python -m venv .venv
 .venv\Scripts\activate        # Windows; on macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
